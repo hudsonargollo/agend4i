@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
+import { MOCK_PROVIDER } from '../constants';
+import { supabase } from '@/integrations/supabase/client';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export const AIChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +13,7 @@ export const AIChat: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,17 +37,62 @@ export const AIChat: React.FC = () => {
     setInputText('');
     setLoading(true);
 
-    // Simulated response - In production, connect to Lovable Cloud edge function
-    setTimeout(() => {
+    try {
+      // Build messages for the API (excluding the initial bot message)
+      const apiMessages = messages
+        .filter(m => m.id !== 'init')
+        .map(m => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.text
+        }));
+      
+      apiMessages.push({ role: 'user', content: inputText });
+
+      const { data, error } = await supabase.functions.invoke('chat-ai', {
+        body: { 
+          messages: apiMessages,
+          providerInfo: {
+            name: MOCK_PROVIDER.name,
+            location: MOCK_PROVIDER.location,
+            rating: MOCK_PROVIDER.rating,
+            services: MOCK_PROVIDER.services,
+            professionals: MOCK_PROVIDER.professionals,
+            policies: MOCK_PROVIDER.policies,
+            loyaltyProgram: MOCK_PROVIDER.loyaltyProgram
+          }
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data?.error) {
+        toast({
+          title: "Erro",
+          description: data.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'model',
-        text: 'Desculpe, estou offline no momento. Para ativar o chat com IA, conecte o projeto ao Lovable Cloud e configure a API do Gemini. 🔧',
+        text: data.response || "Desculpe, não consegui processar sua mensagem.",
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, botMsg]);
+    } catch (e) {
+      console.error("Chat error:", e);
+      toast({
+        title: "Erro de conexão",
+        description: "Não foi possível conectar ao assistente. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   if (!isOpen) {
