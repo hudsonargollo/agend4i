@@ -1,0 +1,4 @@
+project_id = "ucmedbalujyknisrnudb"
+
+[functions.chat-ai]
+verify_jwt = false
