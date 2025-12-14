@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
 import { MOCK_PROVIDER } from '../constants';
 import { supabase } from '@/integrations/supabase/client';
-import { MessageCircle, X, Send, Bot } from 'lucide-react';
+import { MessageCircle, X, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export const AIChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'init', role: 'model', text: 'Olá! Posso ajudar você a encontrar o serviço certo ou tirar dúvidas. O que você precisa?', timestamp: Date.now() }
+    { id: 'init', role: 'model', text: `E aí! 👋 Sou o assistente da ${MOCK_PROVIDER.name}. Como posso te ajudar hoje? Quer saber sobre serviços, horários ou fazer um agendamento?`, timestamp: Date.now() }
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -113,17 +113,22 @@ export const AIChat: React.FC = () => {
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-border flex justify-between items-center bg-secondary">
+        <div className="p-4 border-b border-border flex justify-between items-center bg-gradient-to-r from-primary/10 to-secondary">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-primary" />
-            </div>
+            <img 
+              src={MOCK_PROVIDER.avatarUrl} 
+              alt={MOCK_PROVIDER.name}
+              className="w-10 h-10 rounded-full object-cover border-2 border-primary/30"
+            />
             <div>
-              <h3 className="font-semibold text-foreground text-sm">Recepcionista Virtual</h3>
-              <p className="text-xs text-muted-foreground">Sempre online</p>
+              <h3 className="font-semibold text-foreground text-sm">{MOCK_PROVIDER.name}</h3>
+              <p className="text-xs text-green-500 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                Online agora
+              </p>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
+          <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
