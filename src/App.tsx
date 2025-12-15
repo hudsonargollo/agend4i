@@ -27,9 +27,19 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
+              
+              {/* Admin interface routes - authenticated users */}
+              <Route path="/app" element={<Dashboard />} />
+              <Route path="/app/dashboard" element={<Dashboard />} />
+              <Route path="/app/services" element={<DashboardServices />} />
+              
+              {/* Legacy routes for backward compatibility */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/services" element={<DashboardServices />} />
+              
+              {/* Public booking interface - tenant slug based */}
               <Route path="/:slug" element={<PublicBooking />} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

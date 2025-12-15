@@ -1,5 +1,5 @@
 -- ==========================================
--- AGENDAI.ONLINE MULTI-TENANT SCHEMA
+-- AGENDAI MULTI-TENANT SCHEMA
 -- ==========================================
 
 -- 1. Create app_role enum for RBAC

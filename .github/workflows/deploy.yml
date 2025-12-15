@@ -1,0 +1,189 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main      # Production deployment
+      - develop   # Staging deployment
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # Determine deployment environment based on branch
+  determine-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      domain: ${{ steps.env.outputs.domain }}
+      wrangler_env: ${{ steps.env.outputs.wrangler_env }}
+      should_deploy: ${{ steps.env.outputs.should_deploy }}
+    steps:
+      - name: Determine deployment environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "domain=agendai.clubemkt.digital" >> $GITHUB_OUTPUT
+            echo "wrangler_env=production" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "domain=staging.agendai.clubemkt.digital" >> $GITHUB_OUTPUT
+            echo "wrangler_env=staging" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "environment=preview" >> $GITHUB_OUTPUT
+            echo "domain=preview.pages.dev" >> $GITHUB_OUTPUT
+            echo "wrangler_env=preview" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "environment=none" >> $GITHUB_OUTPUT
+            echo "domain=" >> $GITHUB_OUTPUT
+            echo "wrangler_env=" >> $GITHUB_OUTPUT
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Pages
+    needs: determine-environment
+    if: needs.determine-environment.outputs.should_deploy == 'true'
+    
+    environment:
+      name: ${{ needs.determine-environment.outputs.environment }}
+      url: https://${{ needs.determine-environment.outputs.domain }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Validate environment configuration
+        run: npm run env:validate:${{ needs.determine-environment.outputs.environment }}
+        
+      - name: Validate GitHub Secrets
+        run: |
+          # Validate that required secrets are present (without exposing values)
+          if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
+            if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN_PROD }}" ] && [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+              echo "❌ Missing CLOUDFLARE_API_TOKEN_PROD or CLOUDFLARE_API_TOKEN for production deployment"
+              exit 1
+            fi
+            if [ -z "${{ secrets.VITE_SUPABASE_URL_PROD }}" ] && [ -z "${{ secrets.VITE_SUPABASE_URL }}" ]; then
+              echo "❌ Missing VITE_SUPABASE_URL_PROD or VITE_SUPABASE_URL for production deployment"
+              exit 1
+            fi
+          elif [ "${{ needs.determine-environment.outputs.environment }}" = "staging" ]; then
+            if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN_STAGING }}" ] && [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+              echo "❌ Missing CLOUDFLARE_API_TOKEN_STAGING or CLOUDFLARE_API_TOKEN for staging deployment"
+              exit 1
+            fi
+            if [ -z "${{ secrets.VITE_SUPABASE_URL_STAGING }}" ] && [ -z "${{ secrets.VITE_SUPABASE_URL }}" ]; then
+              echo "❌ Missing VITE_SUPABASE_URL_STAGING or VITE_SUPABASE_URL for staging deployment"
+              exit 1
+            fi
+          else
+            if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+              echo "❌ Missing CLOUDFLARE_API_TOKEN for deployment"
+              exit 1
+            fi
+          fi
+          echo "✅ All required secrets are configured"
+        
+      - name: Build application
+        run: npm run build:${{ needs.determine-environment.outputs.environment }}
+        env:
+          VITE_ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
+          VITE_APP_DOMAIN: ${{ needs.determine-environment.outputs.domain }}
+          # Environment-specific Supabase configuration
+          VITE_SUPABASE_URL: ${{ needs.determine-environment.outputs.environment == 'production' && secrets.VITE_SUPABASE_URL_PROD || needs.determine-environment.outputs.environment == 'staging' && secrets.VITE_SUPABASE_URL_STAGING || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PROJECT_ID: ${{ needs.determine-environment.outputs.environment == 'production' && secrets.VITE_SUPABASE_PROJECT_ID_PROD || needs.determine-environment.outputs.environment == 'staging' && secrets.VITE_SUPABASE_PROJECT_ID_STAGING || secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ needs.determine-environment.outputs.environment == 'production' && secrets.VITE_SUPABASE_PUBLISHABLE_KEY_PROD || needs.determine-environment.outputs.environment == 'staging' && secrets.VITE_SUPABASE_PUBLISHABLE_KEY_STAGING || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        
+      - name: Setup Wrangler CLI
+        uses: cloudflare/wrangler-action@v3
+        with:
+          # Use environment-specific API tokens for enhanced security
+          apiToken: ${{ needs.determine-environment.outputs.environment == 'production' && secrets.CLOUDFLARE_API_TOKEN_PROD || needs.determine-environment.outputs.environment == 'staging' && secrets.CLOUDFLARE_API_TOKEN_STAGING || secrets.CLOUDFLARE_API_TOKEN }}
+          wranglerVersion: '3'
+          
+      - name: Deploy to Cloudflare Pages (Production)
+        if: needs.determine-environment.outputs.environment == 'production' && github.event_name == 'push'
+        run: |
+          npx wrangler pages deploy dist --project-name agendai-saas-production --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_PROD || secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: Deploy to Cloudflare Pages (Staging)
+        if: needs.determine-environment.outputs.environment == 'staging' && github.event_name == 'push'
+        run: |
+          npx wrangler pages deploy dist --project-name agendai-saas-staging --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_STAGING || secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: Deploy Preview (Pull Request)
+        if: needs.determine-environment.outputs.environment == 'preview' && github.event_name == 'pull_request'
+        run: |
+          npx wrangler pages deploy dist --project-name agendai-saas-preview --env preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: Verify deployment
+        if: github.event_name == 'push'
+        run: npm run verify:deployment https://${{ needs.determine-environment.outputs.domain }}
+        
+      - name: Report deployment status to GitHub
+        if: always()
+        run: |
+          # Determine deployment status and URLs
+          if [ "${{ job.status }}" = "success" ]; then
+            STATUS="success"
+            DESCRIPTION="Deployment completed successfully"
+            URL="https://${{ needs.determine-environment.outputs.domain }}"
+          else
+            STATUS="failure"
+            DESCRIPTION="Deployment failed"
+            URL=""
+          fi
+          
+          # Report status using our enhanced GitHub integration
+          node scripts/github-deployment-status.js $STATUS \
+            --description="$DESCRIPTION" \
+            --url="$URL" \
+            --environment="${{ needs.determine-environment.outputs.environment }}" \
+            --create-deployment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOYMENT_ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
+          GITHUB_EVENT_NUMBER: ${{ github.event.number }}
+
+  # Separate job for handling deployment notifications
+  notify:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+    
+    steps:
+      - name: Deployment Success Notification
+        if: needs.deploy.result == 'success'
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Production: https://agendai.clubemkt.digital"
+          echo "Staging: https://staging.agendai.clubemkt.digital"
+          
+      - name: Deployment Failure Notification
+        if: needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the logs above for details."
+          exit 1

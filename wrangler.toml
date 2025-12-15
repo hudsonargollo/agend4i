@@ -1,0 +1,20 @@
+name = "agendai-saas-production"
+compatibility_date = "2024-12-15"
+
+# Pages configuration
+pages_build_output_dir = "dist"
+
+# Environment variables for production
+[vars]
+VITE_ENVIRONMENT = "production"
+VITE_APP_DOMAIN = "agendai.clubemkt.digital"
+VITE_SUPABASE_URL = "https://ucmedbalujyknisrnudb.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "ucmedbalujyknisrnudb"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjbWVkYmFsdWp5a25pc3JudWRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2Njc3MjQsImV4cCI6MjA4MTI0MzcyNH0.URt8ULbtLcsVWMciZA3avWMf7RkGw7UTFp5KiOyc79Y"
+
+[env.preview.vars]
+VITE_ENVIRONMENT = "preview"
+VITE_APP_DOMAIN = "preview.pages.dev"
+VITE_SUPABASE_URL = "https://ucmedbalujyknisrnudb.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "ucmedbalujyknisrnudb"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjbWVkYmFsdWp5a25pc3JudWRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2Njc3MjQsImV4cCI6MjA4MTI0MzcyNH0.URt8ULbtLcsVWMciZA3avWMf7RkGw7UTFp5KiOyc79Y"

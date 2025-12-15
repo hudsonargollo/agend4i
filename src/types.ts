@@ -41,7 +41,9 @@ export interface TimeSlot {
   available: boolean;
 }
 
-export interface CartItem extends Service {}
+export interface CartItem extends Service {
+  quantity?: number;
+}
 
 export enum AppMode {
   CLIENT = 'CLIENT',

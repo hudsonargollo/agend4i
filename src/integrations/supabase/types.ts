@@ -404,6 +404,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_availability: {
+        Args: {
+          p_tenant_id: string
+          p_staff_id: string
+          p_start_time: string
+          p_end_time: string
+          p_exclude_booking_id?: string
+        }
+        Returns: boolean
+      }
       get_user_tenant_ids: { Args: never; Returns: string[] }
       has_tenant_role: {
         Args: {

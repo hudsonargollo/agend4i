@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Scissors, Loader2, Check, X } from 'lucide-react';
+import { getCurrentDomain, generateTenantURL } from '@/lib/domain';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -22,6 +23,9 @@ export default function Onboarding() {
   const [slug, setSlug] = useState('');
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
+  
+  // Get current domain for display
+  const currentDomain = getCurrentDomain();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -87,7 +91,7 @@ export default function Onboarding() {
     } else {
       toast({
         title: 'Estabelecimento criado!',
-        description: `Sua página estará disponível em agendai.online/${slug}`,
+        description: `Sua página estará disponível em ${generateTenantURL(slug)}`,
       });
       navigate('/dashboard');
     }
@@ -140,7 +144,7 @@ export default function Onboarding() {
               <div className="space-y-2">
                 <Label htmlFor="slug">Seu link personalizado</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">agendai.online/</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">{currentDomain}/</span>
                   <Input
                     id="slug"
                     value={slug}
