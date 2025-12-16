@@ -18,8 +18,8 @@
     "validate:deployment": "node scripts/validate-deployment.js",
     "validate:staging": "node scripts/validate-deployment.js staging",
     "validate:production": "node scripts/validate-deployment.js production",
-    "deploy:staging": "npm run validate:staging && node scripts/deploy-executor.js staging",
-    "deploy:production": "npm run validate:production && node scripts/deploy-executor.js production",
+    "deploy:staging": "npm run build:staging && npm run validate:staging && node scripts/deploy-executor.js staging",
+    "deploy:production": "npm run build:production && npm run validate:production && node scripts/deploy-executor.js production",
     "deploy:preview": "node scripts/deploy-executor.js preview",
     "deploy:staging:verbose": "npm run validate:staging && node scripts/deploy-executor.js staging --verbose",
     "deploy:production:verbose": "npm run validate:production && node scripts/deploy-executor.js production --verbose",
@@ -43,7 +43,8 @@
     "github:status:pending": "node scripts/github-deployment-status.js pending",
     "github:status:success": "node scripts/github-deployment-status.js success",
     "github:status:failure": "node scripts/github-deployment-status.js failure",
-    "github:status:error": "node scripts/github-deployment-status.js error"
+    "github:status:error": "node scripts/github-deployment-status.js error",
+    "oauth:validate": "node scripts/validate-oauth-config.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -81,6 +82,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
+    "gsap": "^3.14.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",

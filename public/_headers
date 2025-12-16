@@ -1,0 +1,52 @@
+# Cache headers for AgendAi Marketing Experience
+# Optimized caching strategies for different asset types
+
+# Static assets - long cache with immutable flag
+/assets/images/*
+  Cache-Control: public, max-age=31536000, immutable
+  
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  
+# CSS and JS bundles - long cache with stale-while-revalidate
+/assets/*.css
+  Cache-Control: public, max-age=31536000, stale-while-revalidate=86400
+  
+/assets/*.js
+  Cache-Control: public, max-age=31536000, stale-while-revalidate=86400
+
+# Service Worker - no cache to ensure updates
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# HTML pages - short cache with stale-while-revalidate
+/*.html
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+  
+# Root HTML
+/
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+# API routes - very short cache
+/api/*
+  Cache-Control: public, max-age=300, stale-while-revalidate=600
+
+# Manifest and other config files
+/manifest.json
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+  
+/robots.txt
+  Cache-Control: public, max-age=86400
+
+# Security headers for all routes
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  
+# Performance headers
+/*
+  Accept-CH: DPR, Viewport-Width, Width
+  Critical-CH: DPR

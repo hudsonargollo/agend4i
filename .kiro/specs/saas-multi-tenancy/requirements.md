@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document specifies the requirements for transforming the existing single-tenant agend4i application into a multi-tenant SaaS platform. The system will support isolated data for multiple businesses (tenants) while allowing public access for their customers to make bookings. The primary goal is to launch "Zeroum Barbearia" as the first paid tenant using Pro Plan features including WhatsApp reminders and Mercado Pago subscription integration.
+This document specifies the requirements for transforming the existing single-tenant agend4i application into a multi-tenant SaaS platform. The system will support isolated data for multiple businesses (tenants) while allowing public access for their customers to make bookings. The platform will feature a self-service onboarding flow where any user can sign up and immediately create their own tenant environment. The primary goal is to launch "Zeroum Barbearia" as the first paid tenant using Pro Plan features including WhatsApp reminders and Mercado Pago subscription integration.
 
 ## Glossary
 
@@ -17,6 +17,10 @@ This document specifies the requirements for transforming the existing single-te
 - **Free_Plan**: Basic subscription tier with limited features
 - **MP_Integration**: Mercado Pago payment processing integration
 - **WhatsApp_Notification**: Automated message sent to customers via WhatsApp API
+- **Landing_Page**: Marketing page at root URL for user acquisition and login access
+- **Self_Service_Onboarding**: Automated process for new users to create their tenant environment
+- **Reserved_Slug**: System-protected URL paths that cannot be used as tenant slugs
+- **Tenant_Slug**: URL-safe identifier for tenant's public booking page (e.g., "zeroumbarbearia")
 
 ## Requirements
 
@@ -115,3 +119,63 @@ This document specifies the requirements for transforming the existing single-te
 3. WHEN routing between modes, THE SaaS_Platform SHALL maintain appropriate authentication and authorization contexts
 4. WHEN loading tenant data, THE SaaS_Platform SHALL use different data scoping strategies for public vs authenticated access
 5. WHEN errors occur, THE SaaS_Platform SHALL provide appropriate error messages for each interface type
+
+### Requirement 9
+
+**User Story:** As a potential customer, I want to discover and sign up for the platform through a marketing landing page, so that I can understand the value proposition and create my account.
+
+#### Acceptance Criteria
+
+1. WHEN a user visits the root URL (/), THE SaaS_Platform SHALL display a marketing landing page with value proposition
+2. WHEN a user clicks "Criar conta grátis" on the landing page, THE SaaS_Platform SHALL redirect them to the signup form
+3. WHEN a user clicks "Entrar" on the landing page, THE SaaS_Platform SHALL redirect them to the login form
+4. WHEN displaying the landing page, THE SaaS_Platform SHALL include hero section, features overview, and clear call-to-action buttons
+5. WHEN users access the landing page, THE SaaS_Platform SHALL not require authentication
+
+### Requirement 10
+
+**User Story:** As a new user, I want to complete self-service onboarding to create my business tenant, so that I can immediately start using the platform without manual approval.
+
+#### Acceptance Criteria
+
+1. WHEN a new user completes registration, THE SaaS_Platform SHALL redirect them to the onboarding flow if they have no tenant association
+2. WHEN a user enters their shop name during onboarding, THE SaaS_Platform SHALL auto-generate a suggested slug based on the name
+3. WHEN a user modifies the suggested slug, THE SaaS_Platform SHALL validate availability in real-time
+4. WHEN a user submits valid onboarding information, THE SaaS_Platform SHALL create a new tenant record and associate the user as owner
+5. WHEN onboarding is completed, THE SaaS_Platform SHALL redirect the user to their admin dashboard (/app)
+
+### Requirement 11
+
+**User Story:** As a system administrator, I want to prevent routing conflicts by reserving system URLs, so that tenant slugs cannot interfere with platform functionality.
+
+#### Acceptance Criteria
+
+1. WHEN validating tenant slugs during registration, THE SaaS_Platform SHALL reject reserved system paths (app, auth, api, dashboard, onboarding, settings, login, register, admin, public)
+2. WHEN a user attempts to use a reserved slug, THE SaaS_Platform SHALL display an error message and suggest alternatives
+3. WHEN checking slug availability, THE SaaS_Platform SHALL verify both database uniqueness and reserved word conflicts
+4. WHEN generating auto-suggested slugs, THE SaaS_Platform SHALL ensure they do not conflict with reserved paths
+5. WHEN displaying slug validation errors, THE SaaS_Platform SHALL provide clear feedback about why the slug is unavailable
+
+### Requirement 12
+
+**User Story:** As a Free Plan user, I want clear limitations on my account features, so that I understand what's included and when I need to upgrade.
+
+#### Acceptance Criteria
+
+1. WHEN a Free Plan tenant attempts to add a second staff member, THE SaaS_Platform SHALL prevent the action and display upgrade prompt
+2. WHEN a Free Plan tenant accesses WhatsApp notification settings, THE SaaS_Platform SHALL show the feature as disabled with upgrade option
+3. WHEN a Free Plan tenant accesses payment processing settings, THE SaaS_Platform SHALL show the feature as disabled with upgrade option
+4. WHEN displaying Free Plan limitations, THE SaaS_Platform SHALL clearly indicate the maximum of 1 staff member allowed
+5. WHEN Free Plan users encounter feature limitations, THE SaaS_Platform SHALL provide clear upgrade paths to Pro Plan
+
+### Requirement 13
+
+**User Story:** As the Zeroum Barbearia owner, I want my existing booking page to work seamlessly at /zeroumbarbearia, so that my current customers can continue booking without disruption.
+
+#### Acceptance Criteria
+
+1. WHEN users visit /zeroumbarbearia, THE SaaS_Platform SHALL load the public booking interface for Zeroum Barbearia tenant
+2. WHEN Zeroum Barbearia customers create bookings, THE SaaS_Platform SHALL maintain all existing functionality and data
+3. WHEN the Zeroum Barbearia tenant is accessed, THE SaaS_Platform SHALL display their specific services, staff, and availability
+4. WHEN Zeroum Barbearia has Pro Plan features enabled, THE SaaS_Platform SHALL send WhatsApp notifications for new bookings
+5. WHEN Zeroum Barbearia processes payments, THE SaaS_Platform SHALL use their configured Mercado Pago integration

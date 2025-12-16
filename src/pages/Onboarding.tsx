@@ -2,14 +2,21 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTenant } from '@/hooks/useTenant';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Scissors, Loader2, Check, X } from 'lucide-react';
+import { Scissors, Loader2, Check, X, AlertCircle, Info } from 'lucide-react';
 import { getCurrentDomain, generateTenantURL } from '@/lib/domain';
+import { 
+  generateSlugFromName, 
+  isValidSlugFormat,
+  isReservedSlug
+} from '@/lib/slugValidation';
+import { validateSlugAvailability, SlugValidationResult } from '@/lib/slugValidationService';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -23,6 +30,8 @@ export default function Onboarding() {
   const [slug, setSlug] = useState('');
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
+  const [slugValidation, setSlugValidation] = useState<SlugValidationResult | null>(null);
+  const [manualSlugEdit, setManualSlugEdit] = useState(false);
   
   // Get current domain for display
   const currentDomain = getCurrentDomain();
@@ -39,36 +48,39 @@ export default function Onboarding() {
     }
   }, [userTenants, tenantLoading, navigate]);
 
-  // Auto-generate slug from shop name
+  // Auto-generate slug from shop name (only if not manually edited)
   useEffect(() => {
-    if (shopName) {
-      const generatedSlug = shopName
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
+    if (shopName && !manualSlugEdit) {
+      const generatedSlug = generateSlugFromName(shopName);
       setSlug(generatedSlug);
     }
-  }, [shopName]);
+  }, [shopName, manualSlugEdit]);
 
-  // Check slug availability
+  // Check slug availability and validation using database function
   useEffect(() => {
     if (!slug || slug.length < 2) {
       setSlugAvailable(null);
+      setSlugValidation(null);
       return;
     }
 
     const checkSlug = async () => {
       setCheckingSlug(true);
-      const { data } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('slug', slug)
-        .maybeSingle();
       
-      setSlugAvailable(data === null);
-      setCheckingSlug(false);
+      try {
+        const validation = await validateSlugAvailability(slug);
+        setSlugValidation(validation);
+        setSlugAvailable(validation.available);
+      } catch (error) {
+        console.error('Error validating slug:', error);
+        setSlugValidation({
+          available: false,
+          error: 'Erro ao verificar disponibilidade do link'
+        });
+        setSlugAvailable(false);
+      } finally {
+        setCheckingSlug(false);
+      }
     };
 
     const timeout = setTimeout(checkSlug, 500);
@@ -79,22 +91,66 @@ export default function Onboarding() {
     if (!shopName || !slug || !slugAvailable) return;
 
     setLoading(true);
-    const { error } = await createTenant(shopName, slug);
-    setLoading(false);
-
-    if (error) {
+    try {
+      const { error } = await createTenant(shopName, slug);
+      
+      if (error) {
+        toast({
+          title: 'Erro ao criar estabelecimento',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Estabelecimento criado com sucesso!',
+          description: `Sua página estará disponível em ${generateTenantURL(slug)}`,
+        });
+        navigate('/app');
+      }
+    } catch (error) {
       toast({
         title: 'Erro ao criar estabelecimento',
-        description: error.message,
+        description: 'Ocorreu um erro inesperado. Tente novamente.',
         variant: 'destructive',
       });
-    } else {
-      toast({
-        title: 'Estabelecimento criado!',
-        description: `Sua página estará disponível em ${generateTenantURL(slug)}`,
-      });
-      navigate('/dashboard');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleSlugChange = (value: string) => {
+    setManualSlugEdit(true);
+    const cleanSlug = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    setSlug(cleanSlug);
+    
+    // Immediate client-side validation feedback
+    if (cleanSlug.length >= 2) {
+      if (isReservedSlug(cleanSlug)) {
+        setSlugValidation({
+          available: false,
+          error: 'Este nome está reservado pelo sistema',
+          suggestions: [
+            `${cleanSlug}-shop`,
+            `${cleanSlug}-store`,
+            `${cleanSlug}1`,
+            `${cleanSlug}-pro`,
+            `${cleanSlug}-biz`
+          ]
+        });
+        setSlugAvailable(false);
+      } else if (!isValidSlugFormat(cleanSlug)) {
+        setSlugValidation({
+          available: false,
+          error: 'Use apenas letras minúsculas, números e hífens (sem começar ou terminar com hífen)'
+        });
+        setSlugAvailable(false);
+      }
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSlug(suggestion);
+    setManualSlugEdit(true);
   };
 
   if (authLoading || tenantLoading) {
@@ -114,25 +170,42 @@ export default function Onboarding() {
           </div>
           <CardTitle className="text-2xl font-bold">Configure seu negócio</CardTitle>
           <CardDescription>
-            Passo {step} de 2
+            Passo {step} de 2 - Vamos criar sua página de agendamentos
           </CardDescription>
+          <div className="mt-4">
+            <Progress value={(step / 2) * 100} className="w-full" />
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {step === 1 && (
             <>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Digite o nome do seu estabelecimento. Vamos usar isso para criar seu link personalizado.
+                </AlertDescription>
+              </Alert>
+              
               <div className="space-y-2">
-                <Label htmlFor="shop-name">Nome do estabelecimento</Label>
+                <Label htmlFor="shop-name">Nome do estabelecimento *</Label>
                 <Input
                   id="shop-name"
-                  placeholder="Ex: Barbearia do João"
+                  placeholder="Ex: Barbearia do João, Salão Beleza & Cia"
                   value={shopName}
                   onChange={(e) => setShopName(e.target.value)}
+                  maxLength={100}
                 />
+                {shopName && (
+                  <p className="text-sm text-muted-foreground">
+                    Seu link será: {currentDomain}/{generateSlugFromName(shopName)}
+                  </p>
+                )}
               </div>
+              
               <Button 
                 className="w-full" 
                 onClick={() => setStep(2)}
-                disabled={!shopName}
+                disabled={!shopName.trim() || shopName.trim().length < 2}
               >
                 Continuar
               </Button>
@@ -141,15 +214,23 @@ export default function Onboarding() {
 
           {step === 2 && (
             <>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Personalize seu link de agendamentos. Seus clientes usarão este endereço para fazer reservas.
+                </AlertDescription>
+              </Alert>
+              
               <div className="space-y-2">
-                <Label htmlFor="slug">Seu link personalizado</Label>
+                <Label htmlFor="slug">Seu link personalizado *</Label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground whitespace-nowrap">{currentDomain}/</span>
                   <Input
                     id="slug"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    onChange={(e) => handleSlugChange(e.target.value)}
                     className="flex-1"
+                    placeholder="meu-negocio"
                   />
                   <div className="w-6">
                     {checkingSlug && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
@@ -157,8 +238,42 @@ export default function Onboarding() {
                     {!checkingSlug && slugAvailable === false && <X className="w-5 h-5 text-destructive" />}
                   </div>
                 </div>
-                {slugAvailable === false && (
-                  <p className="text-sm text-destructive">Este link já está em uso</p>
+                
+                {slugValidation?.error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{slugValidation.error}</AlertDescription>
+                  </Alert>
+                )}
+                
+                {slugValidation?.suggestions && slugValidation.suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {isReservedSlug(slug) 
+                        ? 'Este nome é reservado pelo sistema. Experimente uma dessas alternativas:' 
+                        : 'Este link já está em uso. Experimente uma dessas alternativas:'
+                      }
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {slugValidation.suggestions.map((suggestion) => (
+                        <Button
+                          key={suggestion}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="text-xs hover:bg-primary hover:text-primary-foreground"
+                        >
+                          {currentDomain}/{suggestion}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {slugAvailable === true && (
+                  <p className="text-sm text-green-600">
+                    ✓ Link disponível: {currentDomain}/{slug}
+                  </p>
                 )}
               </div>
               
@@ -169,10 +284,10 @@ export default function Onboarding() {
                 <Button 
                   className="flex-1" 
                   onClick={handleCreateShop}
-                  disabled={loading || !slugAvailable}
+                  disabled={loading || !slugAvailable || !slug.trim()}
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Criar
+                  Criar Estabelecimento
                 </Button>
               </div>
             </>

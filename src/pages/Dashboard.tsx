@@ -10,6 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { FeatureGate, FeatureLocked, PlanBadge } from '@/components/FeatureGate';
 import { BillingManagement } from '@/components/BillingManagement';
+import { StaffManagement } from '@/components/StaffManagement';
+import { WhatsAppSettings } from '@/components/WhatsAppSettings';
+import { PaymentSettings } from '@/components/PaymentSettings';
 import { 
   Calendar, 
   Users, 
@@ -31,6 +34,8 @@ export default function Dashboard() {
   const { currentTenant, userTenants, loading: tenantLoading } = useTenant();
   const { checkFeature, currentPlan, subscriptionStatus } = useFeatureAccess();
   const [showBilling, setShowBilling] = useState(false);
+  const [showStaff, setShowStaff] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -90,6 +95,48 @@ export default function Dashboard() {
             </a>
           </div>
           <div className="flex items-center gap-2">
+            <Dialog open={showStaff} onOpenChange={setShowStaff}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Users className="w-4 h-4 mr-2" />
+                  Staff
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Staff Management</DialogTitle>
+                </DialogHeader>
+                <StaffManagement onUpgrade={() => {
+                  setShowStaff(false);
+                  setShowBilling(true);
+                }} />
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Business Settings</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6">
+                  <WhatsAppSettings onUpgrade={() => {
+                    setShowSettings(false);
+                    setShowBilling(true);
+                  }} />
+                  <PaymentSettings onUpgrade={() => {
+                    setShowSettings(false);
+                    setShowBilling(true);
+                  }} />
+                </div>
+              </DialogContent>
+            </Dialog>
+            
             <Dialog open={showBilling} onOpenChange={setShowBilling}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -182,7 +229,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => navigate('/dashboard/settings')}>
+            <Card className="cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setShowSettings(true)}>
               <CardContent className="pt-6 text-center">
                 <Settings className="w-8 h-8 mx-auto mb-2 text-primary" />
                 <p className="font-medium">Configurações</p>
@@ -194,9 +241,28 @@ export default function Dashboard() {
         {/* Pro Features Section */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Recursos Pro</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FeatureGate feature="multipleStaff">
+              <Card className="cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setShowStaff(true)}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Users className="w-8 h-8 text-purple-600" />
+                    <div>
+                      <h3 className="font-semibold">Staff Management</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Add multiple team members
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full">
+                    Manage Staff
+                  </Button>
+                </CardContent>
+              </Card>
+            </FeatureGate>
+
             <FeatureGate feature="whatsappNotifications">
-              <Card className="cursor-pointer hover:bg-secondary/50 transition-colors">
+              <Card className="cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setShowSettings(true)}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-3">
                     <MessageSquare className="w-8 h-8 text-green-600" />
@@ -215,7 +281,7 @@ export default function Dashboard() {
             </FeatureGate>
 
             <FeatureGate feature="paymentProcessing">
-              <Card className="cursor-pointer hover:bg-secondary/50 transition-colors">
+              <Card className="cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setShowSettings(true)}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-3">
                     <CreditCard className="w-8 h-8 text-blue-600" />

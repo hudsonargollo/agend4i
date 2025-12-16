@@ -1,42 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { AppMode } from '../types';
-import { ClientView } from '../components/ClientView';
-import { AdminView } from '../components/AdminView';
+import React from 'react';
+import { GlobalNavigation } from '@/components/GlobalNavigation';
+import HeroSection from '@/components/HeroSection';
+import SocialProofSection from '@/components/SocialProofSection';
+import { FeaturesSection } from '@/components/FeaturesSection';
+import { BentoGrid, defaultBentoTiles } from '@/components/BentoGrid';
+import { PricingSection } from '@/components/PricingSection';
+import { FAQSection } from '@/components/FAQSection';
+import { Footer } from '@/components/Footer';
 
 const Index: React.FC = () => {
-  const [mode, setMode] = useState<AppMode>(AppMode.CLIENT);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
   return (
-    <div 
-      key={`${mode}-${isDarkMode ? 'dark' : 'light'}`}
-      className="max-w-md mx-auto min-h-screen shadow-2xl relative overflow-hidden animate-fade-in bg-background"
-    >
-      {/* Mode Switcher for Demo Purposes */}
-      <div className="absolute top-2 right-14 z-50">
-        <button 
-          onClick={() => setMode(mode === AppMode.CLIENT ? AppMode.ADMIN : AppMode.CLIENT)}
-          className="bg-foreground/10 backdrop-blur text-foreground/40 hover:text-foreground p-1.5 rounded-lg text-[10px] font-mono transition-all uppercase border border-foreground/5"
-        >
-          {mode === AppMode.CLIENT ? 'Ver Admin' : 'Ver Cliente'}
-        </button>
-      </div>
+    <div className="min-h-screen bg-brand-dark">
+      {/* Global Navigation */}
+      <GlobalNavigation />
 
-      {mode === AppMode.CLIENT ? (
-        <ClientView isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-      ) : (
-        <AdminView />
-      )}
+      {/* Hero Section with AuroraBackground */}
+      <HeroSection
+        headline="Sua Agenda Cheia. Zero Esforço."
+        subheadline="O AgendAi é a sua secretária virtual 24h"
+        ctaText="Começar Grátis"
+        ctaHoverText="Criar Minha Agenda ->"
+      />
+
+      {/* Social Proof Section with marquee animation */}
+      <SocialProofSection />
+
+      {/* Features Section */}
+      <FeaturesSection id="features" />
+
+      {/* Bento Grid Section */}
+      <BentoGrid tiles={defaultBentoTiles} />
+
+      {/* Pricing Section */}
+      <PricingSection id="pricing" />
+
+      {/* FAQ Section */}
+      <FAQSection id="faq" />
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

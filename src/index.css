@@ -6,6 +6,31 @@
 
 @layer base {
   :root {
+    /* AgendAi Neon Design System */
+    --brand-dark: #02040a;
+    --neon-green: #00ff88;
+    --deep-purple: #7c3aed;
+    --glass-surface: rgba(255, 255, 255, 0.05);
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+    
+    /* Design System Effects */
+    --neon-glow: 0 0 10px rgba(0, 255, 136, 0.5);
+    --glass-blur: 12px;
+    --border-radius: 12px;
+    
+    /* Typography */
+    --font-heading-weight: 700;
+    --font-body-weight: 400;
+    --base-size-mobile: 16px;
+    --base-size-desktop: 18px;
+    
+    /* Spacing */
+    --section-padding-mobile: 3rem 0;
+    --section-padding-desktop: 6rem 0;
+    --container-padding: 1rem;
+
+    /* Existing shadcn/ui variables */
     --background: 210 20% 98%;
     --foreground: 240 10% 4%;
 
@@ -47,42 +72,43 @@
   }
 
   .dark {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 95%;
+    /* AgendAi Neon Dark Mode (primary mode) */
+    --background: var(--brand-dark);
+    --foreground: var(--text-primary);
 
-    --card: 240 10% 4%;
-    --card-foreground: 0 0% 95%;
+    --card: var(--brand-dark);
+    --card-foreground: var(--text-primary);
 
-    --popover: 240 10% 4%;
-    --popover-foreground: 0 0% 95%;
+    --popover: var(--brand-dark);
+    --popover-foreground: var(--text-primary);
 
-    --primary: 0 84% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: var(--neon-green);
+    --primary-foreground: var(--brand-dark);
 
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: rgba(255, 255, 255, 0.1);
+    --secondary-foreground: var(--text-primary);
 
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
+    --muted: rgba(255, 255, 255, 0.05);
+    --muted-foreground: var(--text-secondary);
 
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 95%;
+    --accent: var(--deep-purple);
+    --accent-foreground: var(--text-primary);
 
     --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 95%;
+    --destructive-foreground: var(--text-primary);
 
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 0 84% 60%;
+    --border: rgba(255, 255, 255, 0.1);
+    --input: rgba(255, 255, 255, 0.1);
+    --ring: var(--neon-green);
 
-    --sidebar-background: 240 6% 10%;
-    --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 0 84% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4% 16%;
-    --sidebar-accent-foreground: 240 5% 96%;
-    --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 0 84% 60%;
+    --sidebar-background: var(--brand-dark);
+    --sidebar-foreground: var(--text-primary);
+    --sidebar-primary: var(--neon-green);
+    --sidebar-primary-foreground: var(--brand-dark);
+    --sidebar-accent: rgba(255, 255, 255, 0.1);
+    --sidebar-accent-foreground: var(--text-primary);
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-ring: var(--neon-green);
   }
 }
 
@@ -104,5 +130,90 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  
+  /* AgendAi Neon Design System Utilities */
+  .glass-effect {
+    @apply bg-white/5 backdrop-blur-[12px] border border-white/10;
+  }
+  
+  .glass-highlighted {
+    @apply bg-white/10 backdrop-blur-[12px] border border-neon-green/30;
+  }
+  
+  .glass-pricing {
+    @apply bg-white/5 backdrop-blur-[12px] border border-white/20;
+  }
+  
+  .neon-glow {
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+  }
+  
+  .neon-glow-lg {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+  }
+  
+  .text-heading {
+    @apply font-bold tracking-tight;
+  }
+  
+  .text-body {
+    @apply font-normal tracking-normal;
+  }
+  
+  .section-padding-mobile {
+    @apply py-12;
+  }
+  
+  .section-padding-desktop {
+    @apply py-24;
+  }
+  
+  .container-padding {
+    @apply px-4;
+  }
+  
+  .gpu-accelerated {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+  
+  /* 3D Perspective Effects */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .rotate-x-12 {
+    transform: rotateX(12deg);
+  }
+  
+  .rotate-x-0 {
+    transform: rotateX(0deg);
+  }
+  
+  /* Marquee Animation Styles */
+  .marquee-container {
+    @apply w-full overflow-hidden;
+  }
+  
+  .marquee-content {
+    @apply flex gap-8 gpu-accelerated;
+    animation: marquee 30s linear infinite;
+  }
+  
+  .marquee-item {
+    @apply flex-shrink-0 transition-all duration-300;
+  }
+  
+  .logo-wrapper {
+    @apply w-32 h-16 flex items-center justify-center p-4 rounded-lg;
+    @apply bg-white/5 backdrop-blur-sm border border-white/10;
+    @apply transition-all duration-300 hover:bg-white/10 hover:border-neon-green/30;
+  }
+  
+  .logo-image {
+    @apply max-w-full max-h-full object-contain filter grayscale opacity-60;
+    @apply transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100;
+    @apply group-hover:drop-shadow-[0_0_8px_rgba(0,255,136,0.4)];
   }
 }

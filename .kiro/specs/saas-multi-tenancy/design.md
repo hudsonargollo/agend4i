@@ -2,9 +2,9 @@
 
 ## Overview
 
-This design document outlines the architecture for transforming the existing single-tenant agend4i application into a multi-tenant SaaS platform. The system will support isolated data for multiple businesses while enabling public booking access and premium features through subscription tiers.
+This design document outlines the architecture for transforming the existing single-tenant agend4i application into a multi-tenant SaaS platform. The system will support isolated data for multiple businesses while enabling public booking access and premium features through subscription tiers. The platform includes a self-service onboarding flow allowing any user to immediately create and configure their own tenant environment.
 
-The architecture leverages Supabase's Row Level Security (RLS) for data isolation, implements dual routing modes (public vs authenticated), and integrates with external services (Mercado Pago, WhatsApp) for premium functionality.
+The architecture leverages Supabase's Row Level Security (RLS) for data isolation, implements triple routing modes (landing, public booking, authenticated admin), and integrates with external services (Mercado Pago, WhatsApp) for premium functionality.
 
 ## Architecture
 
@@ -19,14 +19,31 @@ The architecture leverages Supabase's Row Level Security (RLS) for data isolatio
 
 **Routing Architecture**:
 ```
-/:slug (Public Mode)
+/ (Landing Mode)
+├── Marketing landing page
+├── User acquisition and login access
+└── Public access (no authentication required)
+
+/auth (Authentication Mode)
+├── Login and registration forms
+├── Mode-based redirects (login vs signup)
+└── Public access with post-auth routing
+
+/onboarding (Onboarding Mode)
+├── Self-service tenant creation
+├── Shop name and slug configuration
+└── Authenticated access (new users only)
+
+/:slug (Public Booking Mode)
 ├── Public booking interface
 ├── Tenant resolution via slug
+├── Reserved slug validation
 └── Anonymous user context
 
 /app (Admin Mode)  
 ├── Authenticated tenant administration
 ├── Tenant resolution via user membership
+├── Feature gating based on subscription plan
 └── Authenticated user context
 ```
 
@@ -47,6 +64,24 @@ The architecture leverages Supabase's Row Level Security (RLS) for data isolatio
 
 ### Frontend Components
 
+**Landing Page** (`src/pages/Index.tsx`):
+- Marketing content with value proposition
+- Call-to-action buttons for signup and login
+- Feature overview and benefits
+- Public access without authentication
+
+**Authentication Interface** (`src/pages/Auth.tsx`):
+- Login and registration forms
+- Mode-based form switching (login/signup)
+- Post-authentication routing logic
+- Email validation and duplicate prevention
+
+**Onboarding Flow** (`src/pages/Onboarding.tsx`):
+- Shop name input and slug generation
+- Real-time slug availability checking
+- Tenant creation and user association
+- Redirect to admin dashboard on completion
+
 **Public Booking Interface** (`src/pages/PublicBooking.tsx`):
 - Tenant-specific booking form
 - Real-time availability checking
@@ -64,6 +99,15 @@ The architecture leverages Supabase's Row Level Security (RLS) for data isolatio
 - Tenant settings and configuration
 
 ### Backend Services
+
+**Slug Validation Service** (Database Function):
+```sql
+validate_tenant_slug(slug_candidate) -> boolean
+```
+- Checks database uniqueness for tenant slugs
+- Validates against reserved system paths
+- Returns availability status for real-time feedback
+- Prevents routing conflicts with system URLs
 
 **Availability Checking Service** (Database Function):
 ```sql
@@ -87,11 +131,30 @@ check_availability(tenant_id, staff_id, start_time, end_time) -> boolean
 
 ## Data Models
 
+### Reserved Slugs Configuration
+```typescript
+const RESERVED_SLUGS = [
+  'app', 'auth', 'api', 'dashboard', 'onboarding', 
+  'settings', 'login', 'register', 'admin', 'public'
+] as const;
+```
+
+### Onboarding Data Model
+```typescript
+interface OnboardingData {
+  shop_name: string;
+  slug: string;
+  user_id: string; // From authenticated session
+  owner_email: string;
+  created_at: string;
+}
+```
+
 ### Enhanced Tenant Model
 ```typescript
 interface Tenant {
   id: string;
-  slug: string; // URL identifier (e.g., "zeroum")
+  slug: string; // URL identifier (e.g., "zeroumbarbearia")
   name: string;
   owner_id: string;
   plan: 'free' | 'pro' | 'enterprise';
@@ -100,6 +163,15 @@ interface Tenant {
   mp_subscription_id?: string;
   settings: TenantSettings;
   status: 'active' | 'suspended' | 'archived';
+  created_at: string;
+  staff_limit: number; // 1 for free, unlimited for pro/enterprise
+}
+
+interface TenantFeatures {
+  whatsapp_notifications: boolean;
+  payment_processing: boolean;
+  max_staff_members: number;
+  custom_branding: boolean;
 }
 ```
 
@@ -178,6 +250,38 @@ After reviewing the prework analysis, several properties can be consolidated to 
 *For any* URL access pattern, the correct interface (public booking vs admin) should be loaded based on the URL structure (/:slug vs /app) with appropriate tenant context
 **Validates: Requirements 8.1, 8.2, 8.4**
 
+**Property 11: Onboarding user redirection**
+*For any* newly registered user without tenant association, the system should redirect them to the onboarding flow after authentication
+**Validates: Requirements 10.1**
+
+**Property 12: Slug generation consistency**
+*For any* shop name input during onboarding, the system should generate a valid, URL-safe slug suggestion that follows consistent transformation rules
+**Validates: Requirements 10.2**
+
+**Property 13: Real-time slug validation**
+*For any* slug candidate entered by users, the system should validate both database uniqueness and reserved word conflicts, returning accurate availability status
+**Validates: Requirements 10.3, 11.3**
+
+**Property 14: Tenant creation completeness**
+*For any* valid onboarding submission, the system should create a complete tenant record with proper user association and default settings
+**Validates: Requirements 10.4**
+
+**Property 15: Reserved slug rejection**
+*For any* slug that matches reserved system paths (app, auth, api, dashboard, onboarding, settings, login, register, admin, public), the validation should fail
+**Validates: Requirements 11.1**
+
+**Property 16: Generated slug safety**
+*For any* auto-generated slug suggestion, the result should not conflict with reserved system paths
+**Validates: Requirements 11.4**
+
+**Property 17: Free Plan staff limitation**
+*For any* Free Plan tenant attempting to add staff members, the system should enforce a maximum limit of 1 staff member (the owner)
+**Validates: Requirements 12.1**
+
+**Property 18: Free Plan feature gating**
+*For any* Free Plan tenant accessing premium features (WhatsApp notifications, payment processing), the features should be disabled with upgrade prompts displayed
+**Validates: Requirements 12.2, 12.3**
+
 ## Error Handling
 
 ### Database-Level Error Handling
@@ -203,15 +307,25 @@ After reviewing the prework analysis, several properties can be consolidated to 
 ### Unit Testing Approach
 Unit tests will focus on specific component behavior and integration points:
 
+- **Landing Page Components**: Test marketing content display and call-to-action functionality
+- **Authentication Flow**: Test login/signup form behavior and post-auth routing
+- **Onboarding Components**: Test shop name input, slug generation, and tenant creation
+- **Slug Validation Logic**: Test reserved word checking and database uniqueness validation
 - **Tenant Resolution Logic**: Test slug-to-tenant mapping and membership-based resolution
 - **Availability Calculation**: Test booking conflict detection with various scenarios
 - **Feature Gating Components**: Test UI component behavior based on subscription status
+- **Free Plan Limitations**: Test staff limit enforcement and premium feature blocking
 - **Payment Integration**: Test webhook processing and subscription status updates
 - **Error Boundary Behavior**: Test graceful degradation and error recovery
 
 ### Property-Based Testing Approach
 Property-based tests will verify universal behaviors across all valid inputs using **fast-check** library for TypeScript/JavaScript. Each test will run a minimum of 100 iterations to ensure comprehensive coverage:
 
+- **Slug Generation Properties**: Generate random shop names and verify consistent slug transformation
+- **Slug Validation Properties**: Generate random slug candidates and verify validation logic
+- **Reserved Word Properties**: Generate various slug inputs and verify reserved word rejection
+- **Onboarding Flow Properties**: Generate random user data and verify tenant creation completeness
+- **Feature Gating Properties**: Generate random tenant/plan combinations and verify feature access
 - **Data Isolation Properties**: Generate random tenant/user combinations and verify data scoping
 - **Booking Conflict Properties**: Generate random booking scenarios and verify availability logic
 - **Subscription Management Properties**: Generate random subscription events and verify state transitions

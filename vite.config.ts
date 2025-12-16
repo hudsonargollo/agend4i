@@ -19,6 +19,33 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    // Build optimizations for caching
+    build: {
+      rollupOptions: {
+        output: {
+          // Generate consistent chunk names for better caching
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name?.split('.') || [];
+            const ext = info[info.length - 1];
+            
+            // Organize assets by type for better caching strategies
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+              return `assets/images/[name]-[hash][extname]`;
+            }
+            if (/woff2?|eot|ttf|otf/i.test(ext)) {
+              return `assets/fonts/[name]-[hash][extname]`;
+            }
+            return `assets/[name]-[hash][extname]`;
+          },
+        },
+      },
+      // Enable source maps for production debugging
+      sourcemap: mode === 'production' ? 'hidden' : true,
+      // Optimize chunk splitting for better caching
+      chunkSizeWarningLimit: 1000,
+    },
     // Ensure environment variables are available to the client
     define: {
       // Make sure VITE_APP_DOMAIN is available in all environments

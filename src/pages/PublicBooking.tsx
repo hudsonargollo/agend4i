@@ -135,13 +135,13 @@ export default function PublicBooking() {
           .select('*')
           .eq('tenant_id', tenantData.id)
           .eq('is_active', true)
-          .order('name'),
+          .order('name', { ascending: true }),
         supabase
           .from('staff')
           .select('*')
           .eq('tenant_id', tenantData.id)
           .eq('is_active', true)
-          .order('display_name'),
+          .order('display_name', { ascending: true }),
       ]);
 
       setServices(servicesRes.data || []);

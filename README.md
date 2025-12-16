@@ -281,4 +281,58 @@ For detailed configuration options, see [Environment Configuration Guide](docs/E
 
 This application recently migrated from `agendai.online` to `agendai.clubemkt.digital`. For migration information and updating external integrations, see [Domain Migration Guide](docs/DOMAIN_MIGRATION.md).
 
+## Google OAuth Authentication
+
+This application supports Google OAuth authentication for user sign-up and sign-in. To enable Google OAuth:
+
+### Quick Setup
+
+1. **Validate current configuration**:
+   ```bash
+   npm run oauth:validate
+   ```
+
+2. **Configure Google OAuth** (see detailed guide):
+   - Set up Google Cloud Console OAuth client
+   - Configure Supabase Google provider
+   - Update environment variables
+
+3. **Test OAuth flow**:
+   ```bash
+   npm run dev
+   # Navigate to /auth and test Google sign-in
+   ```
+
+### Required Environment Variables
+
+Add to all environment files (`.env`, `.env.development`, `.env.production`, `.env.staging`):
+
+```bash
+# Google OAuth Configuration
+VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+```
+
+### OAuth Redirect URLs
+
+Configure these redirect URLs in your Google Cloud Console OAuth client:
+
+- **Development**: `http://localhost:8080/auth/callback`
+- **Staging**: `https://staging.agendai.clubemkt.digital/auth/callback`
+- **Production**: `https://agendai.clubemkt.digital/auth/callback`
+- **Supabase**: `https://ucmedbalujyknisrnudb.supabase.co/auth/v1/callback`
+
+### Detailed Setup Guide
+
+For complete setup instructions, see [Google OAuth Setup Guide](docs/GOOGLE_OAUTH_SETUP.md).
+
+### Validation Commands
+
+```bash
+# Validate OAuth configuration
+npm run oauth:validate
+
+# Test OAuth in development
+npm run dev
+```
+
 
