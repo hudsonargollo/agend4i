@@ -1,4 +1,4 @@
-name = "agendai-saas-production"
+name = "agendai-saas"
 compatibility_date = "2024-12-15"
 
 # Pages configuration
@@ -8,9 +8,9 @@ pages_build_output_dir = "dist"
 [vars]
 VITE_ENVIRONMENT = "production"
 VITE_APP_DOMAIN = "agendai.clubemkt.digital"
-VITE_SUPABASE_URL = "https://wcckewaxjpxlucppbkda.supabase.co"
-VITE_SUPABASE_PROJECT_ID = "wcckewaxjpxlucppbkda"
-VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjY2tld2F4anB4bHVjcHBia2RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3OTY3NjcsImV4cCI6MjA4MTM3Mjc2N30.iMw-10gtQNlSiX6K-cytDXs1QjwtKpoJ3nBBUMlSi2w"
+VITE_SUPABASE_URL = "https://jiekzfipiwhlhhkmzuvr.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "jiekzfipiwhlhhkmzuvr"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZWt6ZmlwaXdobGhoa216dXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5MzcxMjYsImV4cCI6MjA4MTUxMzEyNn0.feuJ29Bzy_aHVvVERQn-HdRa4rRdb2CjmmvPlOeW6h4"
 VITE_GOOGLE_CLIENT_ID = "272226658244-bfcn7cj3lrjmv450rs716bsvc9rk748h.apps.googleusercontent.com"
 
 # Production environment configuration
@@ -19,16 +19,16 @@ VITE_GOOGLE_CLIENT_ID = "272226658244-bfcn7cj3lrjmv450rs716bsvc9rk748h.apps.goog
 [env.production.vars]
 VITE_ENVIRONMENT = "production"
 VITE_APP_DOMAIN = "agendai.clubemkt.digital"
-VITE_SUPABASE_URL = "https://wcckewaxjpxlucppbkda.supabase.co"
-VITE_SUPABASE_PROJECT_ID = "wcckewaxjpxlucppbkda"
-VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjY2tld2F4anB4bHVjcHBia2RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3OTY3NjcsImV4cCI6MjA4MTM3Mjc2N30.iMw-10gtQNlSiX6K-cytDXs1QjwtKpoJ3nBBUMlSi2w"
+VITE_SUPABASE_URL = "https://jiekzfipiwhlhhkmzuvr.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "jiekzfipiwhlhhkmzuvr"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZWt6ZmlwaXdobGhoa216dXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5MzcxMjYsImV4cCI6MjA4MTUxMzEyNn0.feuJ29Bzy_aHVvVERQn-HdRa4rRdb2CjmmvPlOeW6h4"
 VITE_GOOGLE_CLIENT_ID = "272226658244-bfcn7cj3lrjmv450rs716bsvc9rk748h.apps.googleusercontent.com"
 
 # Preview environment configuration
 [env.preview.vars]
 VITE_ENVIRONMENT = "preview"
 VITE_APP_DOMAIN = "preview.pages.dev"
-VITE_SUPABASE_URL = "https://wcckewaxjpxlucppbkda.supabase.co"
-VITE_SUPABASE_PROJECT_ID = "wcckewaxjpxlucppbkda"
-VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjY2tld2F4anB4bHVjcHBia2RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3OTY3NjcsImV4cCI6MjA4MTM3Mjc2N30.iMw-10gtQNlSiX6K-cytDXs1QjwtKpoJ3nBBUMlSi2w"
+VITE_SUPABASE_URL = "https://jiekzfipiwhlhhkmzuvr.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "jiekzfipiwhlhhkmzuvr"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZWt6ZmlwaXdobGhoa216dXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5MzcxMjYsImV4cCI6MjA4MTUxMzEyNn0.feuJ29Bzy_aHVvVERQn-HdRa4rRdb2CjmmvPlOeW6h4"
 VITE_GOOGLE_CLIENT_ID = "272226658244-bfcn7cj3lrjmv450rs716bsvc9rk748h.apps.googleusercontent.com"
