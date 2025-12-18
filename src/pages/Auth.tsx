@@ -504,7 +504,8 @@ export default function Auth() {
         <span className="text-sm">Voltar ao início</span>
       </Link>
 
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        <Card className="w-full">
         <CardHeader className="text-center">
           <Link to="/" className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center mb-4 hover:opacity-90 transition-opacity">
             <Calendar className="w-6 h-6 text-primary-foreground" />
@@ -657,20 +658,23 @@ export default function Auth() {
             </TabsContent>
           </Tabs>
         </CardContent>
-      </Card>
-      
-      {/* Legal Links */}
-      <div className="mt-6 text-center">
-        <p className="text-xs text-muted-foreground">
-          Ao criar uma conta, você concorda com nossos{' '}
-          <Link to="/terms" className="text-primary hover:underline">
-            Termos de Uso
-          </Link>{' '}
-          e{' '}
-          <Link to="/privacy" className="text-primary hover:underline">
-            Política de Privacidade
-          </Link>
-        </p>
+        </Card>
+        
+        {/* Legal Links */}
+        <div className="mt-8 text-center">
+          <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Ao criar uma conta, você concorda com nossos{' '}
+              <Link to="/terms" className="text-primary hover:underline font-medium transition-colors">
+                Termos de Uso
+              </Link>{' '}
+              e nossa{' '}
+              <Link to="/privacy" className="text-primary hover:underline font-medium transition-colors">
+                Política de Privacidade
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
