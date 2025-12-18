@@ -163,7 +163,14 @@ export default function AuthCallback() {
           variant: 'destructive',
         });
         
-        navigate('/auth?error=callback_error');
+        // Try to navigate to auth page, but handle potential navigation issues
+        try {
+          navigate('/auth?error=callback_error');
+        } catch (navError) {
+          console.error('Navigation error:', navError);
+          // Fallback: redirect using window.location
+          window.location.href = '/auth?error=callback_error';
+        }
       }
     };
 

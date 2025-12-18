@@ -358,6 +358,16 @@ export default function Auth() {
       // Get proper redirect URLs for current environment
       const redirectUrls = getOAuthRedirectUrls(config);
       
+      // For development, use the current window location to ensure correct port
+      let callbackBaseUrl = redirectUrls.appCallback;
+      if (window.location.hostname === 'localhost') {
+        callbackBaseUrl = `${window.location.protocol}//${window.location.host}/auth/callback`;
+      }
+      
+      // Debug: Log the redirect URLs
+      console.log('OAuth redirect URLs:', redirectUrls);
+      console.log('Using callback base URL:', callbackBaseUrl);
+      
       // Initialize secure OAuth with CSRF protection
       const returnTo = searchParams.get('returnTo');
       const secureOAuth = await initiateSecureOAuth(returnTo || undefined);
@@ -373,10 +383,13 @@ export default function Auth() {
       
       // Add signup mode parameter to track if this is a signup attempt
       const isSignupMode = activeTab === 'signup';
-      const callbackUrl = new URL(redirectUrls.appCallback);
+      const callbackUrl = new URL(callbackBaseUrl);
       if (isSignupMode) {
         callbackUrl.searchParams.set('signup_mode', 'true');
       }
+      
+      // Debug: Log the final callback URL
+      console.log('Final OAuth callback URL:', callbackUrl.toString());
       
       // Validate OAuth parameters before initiating flow
       const oauthParams = {

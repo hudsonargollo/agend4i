@@ -30,19 +30,19 @@ Add these redirect URLs to your Google OAuth client:
 **Development:**
 ```
 http://localhost:8080/auth/callback
-https://ucmedbalujyknisrnudb.supabase.co/auth/v1/callback
+https://jiekzfipiwhlhhkmzuvr.supabase.co/auth/v1/callback
 ```
 
 **Staging:**
 ```
 https://staging.agendai.clubemkt.digital/auth/callback
-https://ucmedbalujyknisrnudb.supabase.co/auth/v1/callback
+https://jiekzfipiwhlhhkmzuvr.supabase.co/auth/v1/callback
 ```
 
 **Production:**
 ```
 https://agendai.clubemkt.digital/auth/callback
-https://ucmedbalujyknisrnudb.supabase.co/auth/v1/callback
+https://jiekzfipiwhlhhkmzuvr.supabase.co/auth/v1/callback
 ```
 
 ### 1.3 Get Client Credentials
@@ -63,7 +63,7 @@ After creating the OAuth client, copy:
 4. Find **Google** in the list and click **Configure**
 5. Enable the Google provider
 6. Enter the **Client ID** and **Client Secret** from Google Cloud Console
-7. Configure the redirect URL: `https://ucmedbalujyknisrnudb.supabase.co/auth/v1/callback`
+7. Configure the redirect URL: `https://jiekzfipiwhlhhkmzuvr.supabase.co/auth/v1/callback`
 
 ### 2.2 Configure OAuth Scopes
 
