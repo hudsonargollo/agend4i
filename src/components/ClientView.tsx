@@ -236,7 +236,12 @@ export const ClientView: React.FC<ClientViewProps> = ({ isDarkMode, toggleTheme 
                key={pro.id}
                professional={pro}
                isSelected={selectedProfessional?.id === pro.id}
-               onSelect={setSelectedProfessional}
+               onSelect={(professionalId) => {
+                 const professional = MOCK_PROVIDER.professionals.find(p => p.id === professionalId);
+                 if (professional) {
+                   setSelectedProfessional(professional);
+                 }
+               }}
              />
           ))}
         </div>

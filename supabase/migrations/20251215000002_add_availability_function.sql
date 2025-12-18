@@ -15,7 +15,7 @@ RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   conflict_count INTEGER;
 BEGIN
@@ -47,7 +47,7 @@ BEGIN
   -- Return TRUE if no conflicts found
   RETURN conflict_count = 0;
 END;
-$;
+$$;
 
 -- Grant execute permission to anonymous users for public booking
 GRANT EXECUTE ON FUNCTION public.check_availability(UUID, UUID, TIMESTAMPTZ, TIMESTAMPTZ, UUID) TO anon;

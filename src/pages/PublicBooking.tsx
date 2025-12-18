@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { MapPin, Star, Clock, Scissors, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, Scissors, Calendar, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { 
   createBookingConflictError, 
   createExternalServiceError, 
   validateBookingData, 
   generateAlternativeSlots, 
-  withRetry, 
-  retryManager,
+  withRetry,
   formatErrorMessage,
   type AppError 
 } from '@/lib/errorHandling';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ProfessionalCard } from '@/components/ProfessionalCard';
+import { InlineAvailabilityPicker } from '@/components/booking/InlineAvailabilityPicker';
+import { BookingSlot } from '@/components/booking/TimeSlotGrid';
+import { CustomerInfoForm, CustomerInfo } from '@/components/booking/CustomerInfoForm';
+import { BookingSummary } from '@/components/booking/BookingSummary';
+import { BookingConfirmation } from '@/components/booking/BookingConfirmation';
+import { BookingConflictHandler } from '@/components/booking/BookingConflictHandler';
 
 interface TenantSettings {
   primary_color?: string;
@@ -64,19 +68,15 @@ interface BookingFormData {
   notes: string;
 }
 
-type BookingStep = 'services' | 'staff' | 'datetime' | 'customer' | 'confirmation';
-
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   
-  // Booking flow state
-  const [currentStep, setCurrentStep] = useState<BookingStep>('services');
+  // Booking flow state - keep service selection as initial step
   const [bookingData, setBookingData] = useState<BookingFormData>({
     serviceId: '',
     staffId: '',
@@ -90,12 +90,28 @@ export default function PublicBooking() {
   
   // UI state
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [error, setError] = useState<AppError | string | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [retryingOperation, setRetryingOperation] = useState(false);
   const [suggestedSlots, setSuggestedSlots] = useState<TimeSlot[]>([]);
+  
+  // Responsive layout state
+  const isMobile = useIsMobile();
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<BookingSlot | null>(null);
+  
+  // Customer information state
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+    name: '',
+    phone: '',
+    email: '',
+    notes: ''
+  });
+
+  // Booking conflict state
+  const [showingConflictResolution, setShowingConflictResolution] = useState(false);
 
   useEffect(() => {
     const fetchTenantData = async () => {
@@ -169,25 +185,24 @@ export default function PublicBooking() {
   };
 
   // Check availability for specific time slots with retry logic
-  const checkAvailability = async (date: string, staffId: string, isRetry: boolean = false) => {
-    if (!tenant || !date || !staffId) return;
+  const checkAvailability = async (dateStr: string, staffId: string, isRetry: boolean = false) => {
+    if (!tenant || !dateStr || !staffId) return;
     
-    setCheckingAvailability(true);
     if (!isRetry) {
       setError(null);
       setSuggestedSlots([]);
     }
     
-    const retryKey = `availability_${tenant.id}_${staffId}_${date}`;
+    const retryKey = `availability_${tenant.id}_${staffId}_${dateStr}`;
     
     try {
       const result = await withRetry(async () => {
-        const timeSlots = generateTimeSlots(date);
+        const timeSlots = generateTimeSlots(dateStr);
         const selectedService = services.find(s => s.id === bookingData.serviceId);
         if (!selectedService) throw new Error('Service not found');
         
         const availabilityPromises = timeSlots.map(async (time) => {
-          const startDateTime = new Date(`${date}T${time}:00`);
+          const startDateTime = new Date(`${dateStr}T${time}:00`);
           const endDateTime = new Date(startDateTime.getTime() + selectedService.duration_min * 60000);
           
           const { data, error } = await supabase.rpc('check_availability', {
@@ -215,8 +230,6 @@ export default function PublicBooking() {
       } else {
         setError(createExternalServiceError('database', err as Error));
       }
-    } finally {
-      setCheckingAvailability(false);
     }
   };
 
@@ -266,6 +279,7 @@ export default function PublicBooking() {
           // Generate alternative suggestions
           const alternatives = generateAlternativeSlots(bookingData.time, availableSlots);
           setSuggestedSlots(alternatives);
+          setShowingConflictResolution(true);
           
           throw createBookingConflictError(undefined, alternatives);
         }
@@ -281,12 +295,18 @@ export default function PublicBooking() {
 
         if (existingCustomer) {
           customerId = existingCustomer.id;
-          // Update customer info if provided
+          // Update customer info and track preferences
           const { error: updateError } = await supabase
             .from('customers')
             .update({
               name: bookingData.customerName,
-              email: bookingData.customerEmail || null
+              email: bookingData.customerEmail || null,
+              // Track preferred staff if this is a repeat booking
+              preferred_staff_id: bookingData.staffId,
+              // Update contact date
+              last_contact_date: new Date().toISOString(),
+              // Ensure active status
+              is_active: true
             })
             .eq('id', customerId);
 
@@ -294,14 +314,23 @@ export default function PublicBooking() {
             throw createExternalServiceError('database', updateError);
           }
         } else {
-          // Create new customer
+          // Create new customer with marketing data
           const { data: newCustomer, error: customerError } = await supabase
             .from('customers')
             .insert({
               tenant_id: tenant.id,
               name: bookingData.customerName,
               phone: bookingData.customerPhone,
-              email: bookingData.customerEmail || null
+              email: bookingData.customerEmail || null,
+              // Marketing and consent fields
+              marketing_consent: true, // Implied consent by booking
+              whatsapp_consent: true, // Default to true for WhatsApp notifications
+              email_consent: bookingData.customerEmail ? true : false,
+              // Acquisition tracking
+              acquisition_source: 'direct', // Default, can be enhanced with UTM params
+              // Initial segmentation
+              customer_segment: 'new',
+              is_active: true
             })
             .select('id')
             .single();
@@ -337,7 +366,7 @@ export default function PublicBooking() {
       }, retryKey, 2, 1000);
 
       setBookingId(result);
-      setCurrentStep('confirmation');
+      // Booking confirmation will be handled in unified flow
     } catch (err) {
       console.error('Error submitting booking:', err);
       
@@ -357,57 +386,7 @@ export default function PublicBooking() {
     }
   };
 
-  // Handle step navigation
-  const goToNextStep = () => {
-    setError(null);
-    
-    switch (currentStep) {
-      case 'services':
-        if (!bookingData.serviceId) {
-          setError('Selecione um serviço para continuar.');
-          return;
-        }
-        setCurrentStep('staff');
-        break;
-      case 'staff':
-        if (!bookingData.staffId) {
-          setError('Selecione um profissional para continuar.');
-          return;
-        }
-        setCurrentStep('datetime');
-        break;
-      case 'datetime':
-        if (!bookingData.date || !bookingData.time) {
-          setError('Selecione data e horário para continuar.');
-          return;
-        }
-        setCurrentStep('customer');
-        break;
-      case 'customer':
-        if (!bookingData.customerName || !bookingData.customerPhone) {
-          setError('Nome e telefone são obrigatórios.');
-          return;
-        }
-        submitBooking();
-        break;
-    }
-  };
-
-  const goToPreviousStep = () => {
-    setError(null);
-    
-    switch (currentStep) {
-      case 'staff':
-        setCurrentStep('services');
-        break;
-      case 'datetime':
-        setCurrentStep('staff');
-        break;
-      case 'customer':
-        setCurrentStep('datetime');
-        break;
-    }
-  };
+  // Remove wizard step navigation logic - unified flow handles this differently
 
   // Update booking data
   const updateBookingData = (field: keyof BookingFormData, value: string) => {
@@ -416,16 +395,14 @@ export default function PublicBooking() {
     setSuggestedSlots([]);
   };
 
-  // Retry failed operations
+  // Retry failed operations - simplified for unified flow
   const retryOperation = async () => {
     setRetryingOperation(true);
     setError(null);
     
     try {
-      if (currentStep === 'datetime' && bookingData.date && bookingData.staffId) {
+      if (bookingData.date && bookingData.staffId) {
         await checkAvailability(bookingData.date, bookingData.staffId, true);
-      } else if (currentStep === 'customer') {
-        await submitBooking();
       }
     } catch (err) {
       console.error('Retry operation failed:', err);
@@ -434,12 +411,7 @@ export default function PublicBooking() {
     }
   };
 
-  // Effect to check availability when date/staff changes
-  useEffect(() => {
-    if (currentStep === 'datetime' && bookingData.date && bookingData.staffId) {
-      checkAvailability(bookingData.date, bookingData.staffId);
-    }
-  }, [bookingData.date, bookingData.staffId, currentStep]);
+  // Remove step-dependent availability checking - will be handled by unified flow
 
   if (loading) {
     return (
@@ -475,57 +447,104 @@ export default function PublicBooking() {
   const selectedService = services.find(s => s.id === bookingData.serviceId);
   const selectedStaff = staff.find(s => s.id === bookingData.staffId);
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 'services':
-        return (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Escolha o serviço</h2>
-            {services.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhum serviço disponível no momento
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {services.map((service) => (
-                  <Card 
-                    key={service.id} 
-                    className={`cursor-pointer transition-colors ${
-                      bookingData.serviceId === service.id 
-                        ? 'ring-2 ring-primary bg-primary/5' 
-                        : 'hover:bg-secondary/50'
-                    }`}
-                    onClick={() => updateBookingData('serviceId', service.id)}
-                  >
-                    <CardContent className="py-4 flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">{service.name}</h3>
-                        {service.description && (
-                          <p className="text-sm text-muted-foreground">{service.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          <span>{service.duration_min}min</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">R$ {service.price.toFixed(2)}</p>
-                        {bookingData.serviceId === service.id && (
-                          <CheckCircle className="w-5 h-5 text-primary mt-2" />
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        );
+  // Service selection content - keep as initial step
+  const renderServiceSelection = () => (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Escolha o serviço</h2>
+      {services.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            Nenhum serviço disponível no momento
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {services.map((service) => (
+            <Card 
+              key={service.id} 
+              className={`cursor-pointer transition-colors ${
+                bookingData.serviceId === service.id 
+                  ? 'ring-2 ring-primary bg-primary/5' 
+                  : 'hover:bg-secondary/50'
+              }`}
+              onClick={() => updateBookingData('serviceId', service.id)}
+            >
+              <CardContent className="py-4 flex justify-between items-center">
+                <div>
+                  <h3 className="font-medium">{service.name}</h3>
+                  {service.description && (
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    <span>{service.duration_min}min</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">R$ {service.price.toFixed(2)}</p>
+                  {bookingData.serviceId === service.id && (
+                    <CheckCircle className="w-5 h-5 text-primary mt-2" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
-      case 'staff':
-        return (
+  // Unified booking flow - responsive layout switching
+  const renderUnifiedBookingFlow = () => {
+    if (isMobile) {
+      // Mobile: Accordion pattern
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Escolha o profissional</h2>
+          {staff.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nenhum profissional disponível no momento
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {staff.map((member) => (
+                <ProfessionalCard
+                  key={member.id}
+                  professional={{
+                    id: member.id,
+                    name: member.display_name,
+                    avatarUrl: member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.display_name}`,
+                    role: member.role || 'Profissional'
+                  }}
+                  isSelected={selectedProfessionalId === member.id}
+                  onSelect={handleProfessionalSelect}
+                  expandedContent={
+                    selectedProfessionalId === member.id && selectedService ? (
+                      <div className="pt-4">
+                        <InlineAvailabilityPicker
+                          professionalId={member.id}
+                          tenantId={tenant?.id || ''}
+                          serviceDuration={selectedService.duration_min}
+                          selectedDate={selectedDate}
+                          onDateChange={handleDateChange}
+                          onTimeSlotSelect={handleTimeSlotSelect}
+                        />
+                      </div>
+                    ) : undefined
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    } else {
+      // Desktop: Split view pattern
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Panel: Professional List */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Escolha o profissional</h2>
             {staff.length === 0 ? (
@@ -535,218 +554,180 @@ export default function PublicBooking() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-3">
                 {staff.map((member) => (
-                  <Card 
+                  <ProfessionalCard
                     key={member.id}
-                    className={`cursor-pointer transition-colors ${
-                      bookingData.staffId === member.id 
-                        ? 'ring-2 ring-primary bg-primary/5' 
-                        : 'hover:bg-secondary/50'
-                    }`}
-                    onClick={() => updateBookingData('staffId', member.id)}
-                  >
-                    <CardContent className="py-4 text-center">
-                      {member.avatar_url ? (
-                        <img 
-                          src={member.avatar_url} 
-                          alt={member.display_name}
-                          className="w-16 h-16 mx-auto rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 mx-auto rounded-full bg-secondary flex items-center justify-center">
-                          <span className="text-xl font-bold">{member.display_name[0]}</span>
-                        </div>
-                      )}
-                      <p className="font-medium mt-2">{member.display_name}</p>
-                      {member.role && (
-                        <p className="text-xs text-muted-foreground">{member.role}</p>
-                      )}
-                      {bookingData.staffId === member.id && (
-                        <CheckCircle className="w-5 h-5 text-primary mx-auto mt-2" />
-                      )}
-                    </CardContent>
-                  </Card>
+                    professional={{
+                      id: member.id,
+                      name: member.display_name,
+                      avatarUrl: member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.display_name}`,
+                      role: member.role || 'Profissional'
+                    }}
+                    isSelected={selectedProfessionalId === member.id}
+                    onSelect={handleProfessionalSelect}
+                  />
                 ))}
               </div>
             )}
           </div>
-        );
 
-      case 'datetime':
-        return (
+          {/* Right Panel: Availability Calendar */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Escolha data e horário</h2>
-            
-            {/* Date picker */}
-            <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
-              <Input
-                id="date"
-                type="date"
-                value={bookingData.date}
-                min={new Date().toISOString().split('T')[0]}
-                onChange={(e) => updateBookingData('date', e.target.value)}
-              />
-            </div>
-
-            {/* Time slots */}
-            {bookingData.date && (
-              <div className="space-y-2">
-                <Label>Horários disponíveis</Label>
-                {checkingAvailability ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <Skeleton key={i} className="h-10" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {availableSlots.map((slot) => (
-                      <Button
-                        key={slot.time}
-                        variant={bookingData.time === slot.time ? "default" : "outline"}
-                        disabled={!slot.available}
-                        onClick={() => updateBookingData('time', slot.time)}
-                        className="h-10"
-                      >
-                        {slot.time}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
+            <h2 className="text-lg font-semibold">Disponibilidade</h2>
+            {selectedProfessionalId && selectedService ? (
+              <Card>
+                <CardContent className="p-6">
+                  <InlineAvailabilityPicker
+                    professionalId={selectedProfessionalId}
+                    tenantId={tenant?.id || ''}
+                    serviceDuration={selectedService.duration_min}
+                    selectedDate={selectedDate}
+                    onDateChange={handleDateChange}
+                    onTimeSlotSelect={handleTimeSlotSelect}
+                  />
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Selecione um profissional para ver a disponibilidade</p>
+                </CardContent>
+              </Card>
             )}
           </div>
-        );
-
-      case 'customer':
-        return (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Seus dados</h2>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo *</Label>
-                <Input
-                  id="name"
-                  value={bookingData.customerName}
-                  onChange={(e) => updateBookingData('customerName', e.target.value)}
-                  placeholder="Seu nome completo"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone *</Label>
-                <Input
-                  id="phone"
-                  value={bookingData.customerPhone}
-                  onChange={(e) => updateBookingData('customerPhone', e.target.value)}
-                  placeholder="(11) 99999-9999"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={bookingData.customerEmail}
-                  onChange={(e) => updateBookingData('customerEmail', e.target.value)}
-                  placeholder="seu@email.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={bookingData.notes}
-                  onChange={(e) => updateBookingData('notes', e.target.value)}
-                  placeholder="Alguma observação especial?"
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            {/* Booking summary */}
-            <Card className="bg-secondary/20">
-              <CardContent className="py-4">
-                <h3 className="font-medium mb-2">Resumo do agendamento</h3>
-                <div className="space-y-1 text-sm">
-                  <p><strong>Serviço:</strong> {selectedService?.name}</p>
-                  <p><strong>Profissional:</strong> {selectedStaff?.display_name}</p>
-                  <p><strong>Data:</strong> {new Date(bookingData.date).toLocaleDateString('pt-BR')}</p>
-                  <p><strong>Horário:</strong> {bookingData.time}</p>
-                  <p><strong>Duração:</strong> {selectedService?.duration_min}min</p>
-                  <p><strong>Valor:</strong> R$ {selectedService?.price.toFixed(2)}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-
-      case 'confirmation':
-        return (
-          <div className="space-y-4 text-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-semibold text-green-700">Agendamento confirmado!</h2>
-            
-            <Card>
-              <CardContent className="py-6">
-                <div className="space-y-2 text-sm">
-                  <p><strong>Número do agendamento:</strong> {bookingId}</p>
-                  <p><strong>Serviço:</strong> {selectedService?.name}</p>
-                  <p><strong>Profissional:</strong> {selectedStaff?.display_name}</p>
-                  <p><strong>Data:</strong> {new Date(bookingData.date).toLocaleDateString('pt-BR')}</p>
-                  <p><strong>Horário:</strong> {bookingData.time}</p>
-                  <p><strong>Cliente:</strong> {bookingData.customerName}</p>
-                  <p><strong>Telefone:</strong> {bookingData.customerPhone}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>Seu agendamento foi criado com sucesso!</p>
-              <p>Em breve você receberá uma confirmação.</p>
-            </div>
-
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="mt-4"
-              style={{ backgroundColor: primaryColor }}
-            >
-              Fazer novo agendamento
-            </Button>
-          </div>
-        );
-
-      default:
-        return null;
+        </div>
+      );
     }
+  };
+
+  // Handle professional selection with state management
+  const handleProfessionalSelect = (professionalId: string) => {
+    if (isMobile) {
+      // On mobile, toggle selection (accordion behavior)
+      if (selectedProfessionalId === professionalId) {
+        setSelectedProfessionalId(null);
+        // Clear related state when deselecting
+        setSelectedTimeSlot(null);
+        updateBookingData('staffId', '');
+        updateBookingData('time', '');
+      } else {
+        setSelectedProfessionalId(professionalId);
+        // Clear time slot when switching professionals (prevent data mismatches)
+        setSelectedTimeSlot(null);
+        updateBookingData('time', '');
+        // Preserve selectedServiceId when switching professionals
+        // (serviceId is already preserved in bookingData state)
+      }
+    } else {
+      // On desktop, always select (split view behavior)
+      setSelectedProfessionalId(professionalId);
+      // Clear time slot when switching professionals (prevent data mismatches)
+      setSelectedTimeSlot(null);
+      updateBookingData('time', '');
+      // Preserve selectedServiceId when switching professionals
+      // (serviceId is already preserved in bookingData state)
+    }
+  };
+
+  // Handle time slot selection
+  const handleTimeSlotSelect = (slot: BookingSlot) => {
+    setSelectedTimeSlot(slot);
+    // Update booking data for compatibility with existing booking logic
+    updateBookingData('staffId', selectedProfessionalId || '');
+    updateBookingData('date', selectedDate.toISOString().split('T')[0]);
+    updateBookingData('time', slot.time);
+  };
+
+  // Handle date change
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    // Clear time slot when date changes
+    setSelectedTimeSlot(null);
+    updateBookingData('time', '');
+  };
+
+  // Handle starting a new booking
+  const handleNewBooking = () => {
+    // Reset all booking state
+    setBookingId(null);
+    setSelectedProfessionalId(null);
+    setSelectedTimeSlot(null);
+    setSelectedDate(new Date());
+    setCustomerInfo({
+      name: '',
+      phone: '',
+      email: '',
+      notes: ''
+    });
+    setBookingData({
+      serviceId: '',
+      staffId: '',
+      date: '',
+      time: '',
+      customerName: '',
+      customerPhone: '',
+      customerEmail: '',
+      notes: ''
+    });
+    setError(null);
+    setSuggestedSlots([]);
+    setShowingConflictResolution(false);
+  };
+
+  // Handle selecting an alternative time slot from conflict resolution
+  const handleSelectAlternative = (slot: BookingSlot) => {
+    setSelectedTimeSlot(slot);
+    setShowingConflictResolution(false);
+    setError(null);
+    setSuggestedSlots([]);
+    // Update booking data
+    updateBookingData('time', slot.time);
+  };
+
+  // Handle retrying after conflict
+  const handleRetryAfterConflict = async () => {
+    setShowingConflictResolution(false);
+    setError(null);
+    setSuggestedSlots([]);
+    
+    // Refresh availability to get updated slots
+    if (selectedProfessionalId && selectedDate && selectedService) {
+      await checkAvailability(
+        selectedDate.toISOString().split('T')[0], 
+        selectedProfessionalId, 
+        true
+      );
+    }
+  };
+
+  // Handle customer info change
+  const handleCustomerInfoChange = (info: CustomerInfo) => {
+    setCustomerInfo(info);
+    // Update booking data for compatibility with existing booking logic
+    updateBookingData('customerName', info.name);
+    updateBookingData('customerPhone', info.phone);
+    updateBookingData('customerEmail', info.email);
+    updateBookingData('notes', info.notes);
+  };
+
+  // Handle back from customer form
+  const handleBackFromCustomerForm = () => {
+    setSelectedTimeSlot(null);
+    updateBookingData('time', '');
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with branding */}
+      {/* Header with branding - simplified without step navigation */}
       <div 
         className="py-6 px-4"
         style={{ backgroundColor: primaryColor }}
       >
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-4">
-            {currentStep !== 'services' && currentStep !== 'confirmation' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goToPreviousStep}
-                className="text-white hover:bg-white/20"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-            )}
-            
-            <div className="flex-1 text-center">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
               {tenant?.settings?.logo_url ? (
                 <img 
                   src={tenant.settings.logo_url} 
@@ -760,8 +741,6 @@ export default function PublicBooking() {
               )}
               <h1 className="text-lg font-bold mt-2 text-white">{tenant?.name}</h1>
             </div>
-            
-            <div className="w-10" /> {/* Spacer for centering */}
           </div>
         </div>
       </div>
@@ -773,7 +752,7 @@ export default function PublicBooking() {
             <AlertCircle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-700">
               <div className="space-y-2">
-                <p>{formatErrorMessage(error)}</p>
+                <p>{typeof error === 'string' ? error : formatErrorMessage(error)}</p>
                 
                 {/* Show retry button for retryable errors */}
                 {typeof error === 'object' && 'type' in error && error.type === 'external_service_error' && error.retryable && (
@@ -825,20 +804,58 @@ export default function PublicBooking() {
           </Alert>
         )}
 
-        {renderStepContent()}
+        {/* Show service selection if no service is selected */}
+        {!bookingData.serviceId && renderServiceSelection()}
+        
+        {/* Unified booking flow - responsive layout */}
+        {bookingData.serviceId && !selectedTimeSlot && renderUnifiedBookingFlow()}
+        
+        {/* Customer information form - appears after time slot selection */}
+        {bookingData.serviceId && selectedTimeSlot && selectedService && selectedStaff && !bookingId && (
+          <>
+            <BookingSummary
+              service={selectedService}
+              staff={selectedStaff}
+              timeSlot={selectedTimeSlot}
+              date={selectedDate}
+              tenantName={tenant?.name || ''}
+            />
+            <CustomerInfoForm
+              customerInfo={customerInfo}
+              onCustomerInfoChange={handleCustomerInfoChange}
+              onSubmit={submitBooking}
+              onBack={handleBackFromCustomerForm}
+              isSubmitting={submittingBooking}
+              error={error}
+            />
+          </>
+        )}
 
-        {/* Navigation buttons */}
-        {currentStep !== 'confirmation' && (
-          <div className="mt-6 flex justify-end">
-            <Button 
-              onClick={goToNextStep}
-              disabled={submittingBooking}
-              style={{ backgroundColor: primaryColor }}
-            >
-              {submittingBooking ? 'Agendando...' : 
-               currentStep === 'customer' ? 'Confirmar agendamento' : 'Continuar'}
-            </Button>
-          </div>
+        {/* Booking conflict resolution - appears when there's a booking conflict */}
+        {showingConflictResolution && selectedService && selectedStaff && (
+          <BookingConflictHandler
+            suggestedSlots={suggestedSlots}
+            onSelectAlternative={handleSelectAlternative}
+            onRetry={handleRetryAfterConflict}
+            isRetrying={retryingOperation}
+            professionalName={selectedStaff.display_name}
+            selectedDate={selectedDate}
+            serviceDuration={selectedService.duration_min}
+          />
+        )}
+
+        {/* Booking confirmation - appears after successful booking */}
+        {bookingId && selectedService && selectedStaff && selectedTimeSlot && (
+          <BookingConfirmation
+            bookingId={bookingId}
+            service={selectedService}
+            staff={selectedStaff}
+            timeSlot={selectedTimeSlot}
+            date={selectedDate}
+            customerInfo={customerInfo}
+            tenantName={tenant?.name || ''}
+            onNewBooking={handleNewBooking}
+          />
         )}
       </main>
     </div>
