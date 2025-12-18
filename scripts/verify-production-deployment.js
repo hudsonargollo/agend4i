@@ -4,7 +4,7 @@
  * Production Deployment Verification Script
  */
 
-const PRODUCTION_URL = 'https://5fe05223.agendai-saas.pages.dev';
+const PRODUCTION_URL = 'https://7b6add77.agendai-saas.pages.dev';
 const CUSTOM_DOMAIN = 'https://agendai.clubemkt.digital';
 
 async function verifyDeployment(url) {

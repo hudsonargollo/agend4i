@@ -6,19 +6,24 @@ import { FeaturesSection } from '@/components/FeaturesSection';
 import { BentoGrid, defaultBentoTiles } from '@/components/BentoGrid';
 import { PricingSection } from '@/components/PricingSection';
 import { FAQSection } from '@/components/FAQSection';
+import { GoogleOAuthCompliance } from '@/components/GoogleOAuthCompliance';
+import { AppIdentityBanner } from '@/components/AppIdentityBanner';
 import { LegalNotice } from '@/components/LegalNotice';
 import { Footer } from '@/components/Footer';
 
 const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-brand-dark">
+      {/* App Identity Banner */}
+      <AppIdentityBanner />
+      
       {/* Global Navigation */}
       <GlobalNavigation />
 
       {/* Hero Section with AuroraBackground */}
       <HeroSection
-        headline="Sua Agenda Cheia. Zero Esforço."
-        subheadline="O AgendAi é a sua secretária virtual 24h"
+        headline="AgendAi - Sua Agenda Profissional Online"
+        subheadline="Plataforma completa de agendamento que conecta profissionais aos seus clientes. Gerencie horários, receba pagamentos e automatize sua agenda com segurança total."
         ctaText="Começar Grátis"
         ctaHoverText="Criar Minha Agenda ->"
       />
@@ -37,6 +42,9 @@ const Index: React.FC = () => {
 
       {/* FAQ Section */}
       <FAQSection id="faq" />
+
+      {/* Google OAuth Compliance Section */}
+      <GoogleOAuthCompliance />
 
       {/* Legal Notice */}
       <LegalNotice />

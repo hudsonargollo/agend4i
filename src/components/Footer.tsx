@@ -31,9 +31,14 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
               <Calendar className="w-8 h-8" />
               <span className="text-2xl font-bold tracking-tight">AgendAi</span>
             </Link>
-            <p className="text-text-secondary text-sm text-center md:text-left max-w-xs">
-              A plataforma que conecta profissionais aos seus clientes
-            </p>
+            <div className="text-center md:text-left max-w-xs">
+              <p className="text-text-secondary text-sm mb-2">
+                Plataforma de agendamento profissional online
+              </p>
+              <p className="text-xs text-text-secondary">
+                Domínio verificado: <span className="text-neon-green">agendai.clubemkt.digital</span>
+              </p>
+            </div>
           </div>
 
           {/* Legal Links */}

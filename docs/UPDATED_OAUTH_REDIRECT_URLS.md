@@ -2,7 +2,7 @@
 
 ## Current Deployment URLs
 
-**Latest Deployment**: https://5fe05223.agendai-saas.pages.dev
+**Latest Deployment**: https://7b6add77.agendai-saas.pages.dev
 **Custom Domain**: https://agendai.clubemkt.digital
 
 ## Google OAuth Client Configuration
@@ -16,7 +16,7 @@ http://localhost:8080/auth/callback
 
 ### Production Deployments
 ```
-https://5fe05223.agendai-saas.pages.dev/auth/callback
+https://7b6add77.agendai-saas.pages.dev/auth/callback
 https://agendai.clubemkt.digital/auth/callback
 ```
 
@@ -31,7 +31,7 @@ Copy and paste these URLs into your Google OAuth client:
 
 ```
 http://localhost:8080/auth/callback
-https://5fe05223.agendai-saas.pages.dev/auth/callback
+https://7b6add77.agendai-saas.pages.dev/auth/callback
 https://agendai.clubemkt.digital/auth/callback
 https://jiekzfipiwhlhhkmzuvr.supabase.co/auth/v1/callback
 ```
