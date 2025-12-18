@@ -40,22 +40,28 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="flex items-center gap-6 text-sm">
               <Link 
-                to="/termos" 
+                to="/auth" 
                 className="text-text-secondary hover:text-text-primary transition-colors"
               >
-                Termos
+                Entrar
               </Link>
               <Link 
-                to="/privacidade" 
+                to="/auth?mode=signup" 
                 className="text-text-secondary hover:text-text-primary transition-colors"
               >
-                Privacidade
+                Criar Conta
               </Link>
               <Link 
-                to="/suporte" 
+                to="/terms" 
                 className="text-text-secondary hover:text-text-primary transition-colors"
               >
-                Suporte
+                Termos de Uso
+              </Link>
+              <Link 
+                to="/privacy" 
+                className="text-text-secondary hover:text-text-primary transition-colors"
+              >
+                Política de Privacidade
               </Link>
             </div>
 

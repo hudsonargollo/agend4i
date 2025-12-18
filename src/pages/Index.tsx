@@ -6,6 +6,7 @@ import { FeaturesSection } from '@/components/FeaturesSection';
 import { BentoGrid, defaultBentoTiles } from '@/components/BentoGrid';
 import { PricingSection } from '@/components/PricingSection';
 import { FAQSection } from '@/components/FAQSection';
+import { LegalNotice } from '@/components/LegalNotice';
 import { Footer } from '@/components/Footer';
 
 const Index: React.FC = () => {
@@ -36,6 +37,9 @@ const Index: React.FC = () => {
 
       {/* FAQ Section */}
       <FAQSection id="faq" />
+
+      {/* Legal Notice */}
+      <LegalNotice />
 
       {/* Footer */}
       <Footer />

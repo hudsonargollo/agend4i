@@ -123,10 +123,27 @@ export default function Privacy() {
           </ul>
 
           <div className="mt-12 p-6 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground mb-0">
+            <p className="text-sm text-muted-foreground mb-4">
               Esta política está em conformidade com a Lei Geral de Proteção de Dados (LGPD) 
               e outras regulamentações aplicáveis de proteção de dados.
             </p>
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <Link to="/" className="text-primary hover:underline">
+                Voltar ao Início
+              </Link>
+              <span className="text-muted-foreground">•</span>
+              <Link to="/auth" className="text-primary hover:underline">
+                Entrar
+              </Link>
+              <span className="text-muted-foreground">•</span>
+              <Link to="/auth?mode=signup" className="text-primary hover:underline">
+                Criar Conta
+              </Link>
+              <span className="text-muted-foreground">•</span>
+              <Link to="/terms" className="text-primary hover:underline">
+                Termos de Uso
+              </Link>
+            </div>
           </div>
         </div>
       </main>

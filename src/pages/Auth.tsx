@@ -658,6 +658,20 @@ export default function Auth() {
           </Tabs>
         </CardContent>
       </Card>
+      
+      {/* Legal Links */}
+      <div className="mt-6 text-center">
+        <p className="text-xs text-muted-foreground">
+          Ao criar uma conta, você concorda com nossos{' '}
+          <Link to="/terms" className="text-primary hover:underline">
+            Termos de Uso
+          </Link>{' '}
+          e{' '}
+          <Link to="/privacy" className="text-primary hover:underline">
+            Política de Privacidade
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
